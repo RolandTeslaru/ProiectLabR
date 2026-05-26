@@ -75,6 +75,16 @@ sim_geo <- simuleaza_geografica_chunks(n_iteratii = 1000, chunk = 50)
 cat("Durată totală:", round(difftime(Sys.time(), t0, units = "secs"), 1), "s\n")
 
 # Agregare per iterație (un "an" = o iterație)
+# Costuri pentru funcția de cost (cerința ulterioară 1)
+# c1 = costul de a verifica o cerere (efort operațional)
+# c2 = costul de a NU detecta o cerere suspectă (pierdere de securitate)
+# Justificare: o cerere suspectă nedetectată e mult mai costisitoare
+# decât o verificare manuală. Raportul c2/c1 trebuie să depășească
+# N/s ≈ 1/p_sus = 200 pentru ca verificarea aleatoare să fie
+# economic justificată. Alegem c2/c1 = 300 → optim interior real.
+c1_cost <- 1
+c2_cost <- 300
+
 indicatori_per_iteratie <- function(df) {
   df |>
     group_by(iteratie, strategie) |>
@@ -82,8 +92,13 @@ indicatori_per_iteratie <- function(df) {
       total_suspecte = sum(n_sus),
       total_detectate = sum(detectate),
       rata_detectie = sum(detectate) / pmax(sum(n_sus), 1),  # evită 0/0
+      rata_nedetectie = 1 - sum(detectate) / pmax(sum(n_sus), 1),
       zile_cu_detectie = sum(detectate >= 1),
+      prob_detectie_zi = mean(detectate >= 1),
       total_verificari = sum(n_verificate),
+      verificari_zilnice_medii = mean(n_verificate),
+      cost_total = c1_cost * sum(n_verificate) +
+                   c2_cost * sum(nedetectate),
       .groups = "drop"
     )
 }
@@ -101,10 +116,16 @@ rezumat_final <- toate_indicatorii |>
   summarise(
     rata_medie = mean(rata_detectie),
     rata_sd = sd(rata_detectie),
+    rata_nedetectie_medie = mean(rata_nedetectie),
+    prob_detectie_zi_medie = mean(prob_detectie_zi),
+    prob_detectie_zi_sd = sd(prob_detectie_zi),
     zile_detectie_medie = mean(zile_cu_detectie),
     zile_detectie_sd = sd(zile_cu_detectie),
+    verificari_zilnice_medii = mean(verificari_zilnice_medii),
     verificari_medii = mean(total_verificari),
-    verificari_sd = sd(total_verificari)
+    verificari_sd = sd(total_verificari),
+    cost_mediu = mean(cost_total),
+    cost_sd = sd(cost_total)
   )
 
 print(rezumat_final)
@@ -118,7 +139,7 @@ g1 <- ggplot(an_aleator, aes(x = n_sus)) +
   geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
   labs(title = "Distribuția numărului zilnic de cereri suspecte",
        x = "Cereri suspecte pe zi", y = "Frecvență") +
-  theme_minimal()
+  theme_minimal(base_size = 14)
 
 # Histogramă: detectatele pe zi (toate strategiile)
 g2 <- bind_rows(an_aleator, an_adaptiv, an_geo) |>
@@ -126,7 +147,7 @@ g2 <- bind_rows(an_aleator, an_adaptiv, an_geo) |>
   geom_histogram(binwidth = 1, position = "dodge") +
   labs(title = "Distribuția numărului zilnic de detecții",
        x = "Detectate pe zi", y = "Frecvență") +
-  theme_minimal()
+  theme_minimal(base_size = 14)
 
 # Evoluție zilnică: suspecte vs detectate (strategia geografică)
 g3 <- an_geo |>
@@ -136,7 +157,7 @@ g3 <- an_geo |>
   geom_line(alpha = 0.7) +
   labs(title = "Evoluția zilnică (strategia geografică)",
        x = "Ziua", y = "Număr") +
-  theme_minimal()
+  theme_minimal(base_size = 14)
 
 # Comparație: rata de detecție pe strategii (1000 de iterații)
 g4 <- toate_indicatorii |>
@@ -144,7 +165,7 @@ g4 <- toate_indicatorii |>
   geom_boxplot() +
   labs(title = "Rata de detecție (1000 simulări)",
        x = "Strategie", y = "Detectate / Suspecte") +
-  theme_minimal() +
+  theme_minimal(base_size = 14) +
   theme(legend.position = "none")
 
 # Afișează graficele
@@ -152,3 +173,98 @@ print(g1)
 print(g2)
 print(g3)
 print(g4)
+
+# ==========================================================
+# PARTEA D: Studiul efectului procentului de verificare (cerința 7)
+# Rulează strategia aleatoare cu 1%, 5%, 10%, 20%, 30%
+# ==========================================================
+
+cat("\nRulează studiul pe procente de verificare...\n")
+t0 <- Sys.time()
+
+studiu <- studiu_procente_verificare(
+  procente = c(0.01, 0.05, 0.10, 0.20, 0.30),
+  n_iteratii = 1000,
+  p_sus = 0.005,
+  c1 = c1_cost, c2 = c2_cost
+)
+
+# Versiune mai densă pentru curba de cost (găsim minimul)
+studiu_cost <- studiu_procente_verificare(
+  procente = seq(0.01, 0.50, by = 0.02),
+  n_iteratii = 300,
+  p_sus = 0.005,
+  c1 = c1_cost, c2 = c2_cost
+)
+
+cat("Durată studiu procente:",
+    round(difftime(Sys.time(), t0, units = "secs"), 1), "s\n")
+
+print(studiu)
+
+# Grafic: curba probabilității de detecție vs procent verificat
+g5 <- ggplot(studiu, aes(x = p_verif, y = prob_detectie_zi_medie)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_point(size = 3, color = "steelblue") +
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Efectul procentului de verificare asupra detecției",
+       subtitle = "Strategia aleatoare, p_sus = 0.005, 1000 simulări per punct",
+       x = "Procent verificat din cereri",
+       y = "P(detecție ≥ 1 cerere suspectă într-o zi)") +
+  theme_minimal(base_size = 14)
+
+# Grafic: rata medie de detecție vs procent verificat
+g6 <- ggplot(studiu, aes(x = p_verif, y = rata_detectie_medie)) +
+  geom_line(color = "firebrick", linewidth = 1) +
+  geom_point(size = 3, color = "firebrick") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", alpha = 0.4) +
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Rata medie de detecție vs procent verificat",
+       subtitle = "Linia punctată = identitatea (predicție teoretică)",
+       x = "Procent verificat", y = "Rata medie de detecție") +
+  theme_minimal(base_size = 14)
+
+print(g5)
+print(g6)
+
+# ==========================================================
+# PARTEA E: Funcția de cost (cerința ulterioară 1)
+# Costul total ca funcție de procentul verificat
+# ==========================================================
+
+# Procentul optim (minimul empiric al costului)
+p_optim <- studiu_cost$p_verif[which.min(studiu_cost$cost_mediu)]
+cost_min <- min(studiu_cost$cost_mediu)
+cat(sprintf("\nProcent optim de verificare: %.0f%% (cost mediu = %.0f)\n",
+            p_optim * 100, cost_min))
+
+g7 <- ggplot(studiu_cost, aes(x = p_verif, y = cost_mediu)) +
+  geom_line(color = "darkgreen", linewidth = 1) +
+  geom_point(size = 2, color = "darkgreen") +
+  geom_vline(xintercept = p_optim, linetype = "dashed",
+             color = "red", alpha = 0.7) +
+  annotate("text", x = p_optim, y = cost_min,
+           label = sprintf("optim: %.0f%%", p_optim * 100),
+           hjust = -0.2, vjust = -0.5, color = "red") +
+  scale_x_continuous(labels = scales::percent) +
+  labs(title = "Costul total mediu vs procentul de verificare",
+       subtitle = sprintf("c1 = %d (verificare), c2 = %d (nedetectare)",
+                          c1_cost, c2_cost),
+       x = "Procent verificat", y = "Cost total mediu pe an") +
+  theme_minimal(base_size = 14)
+
+# Comparația costurilor pe strategii (boxplot)
+g8 <- toate_indicatorii |>
+  ggplot(aes(x = strategie, y = cost_total, fill = strategie)) +
+  geom_boxplot() +
+  labs(title = "Distribuția costului total anual pe strategii",
+       subtitle = sprintf("c1 = %d, c2 = %d, 1000 simulări",
+                          c1_cost, c2_cost),
+       x = "Strategie", y = "Cost total anual") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+print(g7)
+print(g8)

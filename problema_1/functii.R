@@ -105,6 +105,84 @@ simuleaza_geografica_full <- function(n_iteratii = 1000, n_zile = 365,
 
 
 
+# ==========================================================
+# Studiu pe scenarii de p_sus (cerința 3)
+# Rulează strategia aleatoare cu mai multe rate de suspiciune
+# ==========================================================
+studiu_scenarii_p_sus <- function(
+    valori_p_sus = c(0.001, 0.005, 0.02),
+    n_iteratii = 1000, n_zile = 365,
+    lambda = 1000, p_verif = 0.10) {
+
+  rezultate <- lapply(valori_p_sus, function(p) {
+    sim <- simuleaza_aleatoare_full(n_iteratii = n_iteratii, n_zile = n_zile,
+                                    lambda = lambda, p_sus = p,
+                                    p_verif = p_verif)
+
+    ind <- sim |>
+      dplyr::group_by(iteratie) |>
+      dplyr::summarise(
+        rata_detectie = sum(detectate) / pmax(sum(n_sus), 1),
+        prob_detectie_zi = mean(detectate >= 1),
+        total_suspecte = sum(n_sus),
+        .groups = "drop"
+      )
+
+    data.frame(
+      p_sus = p,
+      total_suspecte_mediu = mean(ind$total_suspecte),
+      rata_detectie_medie = mean(ind$rata_detectie),
+      rata_detectie_sd = sd(ind$rata_detectie),
+      prob_detectie_zi_medie = mean(ind$prob_detectie_zi)
+    )
+  })
+
+  dplyr::bind_rows(rezultate)
+}
+
+
+# ==========================================================
+# Studiu pe procente de verificare (cerința 7)
+# Rulează strategia aleatoare cu mai multe procente și
+# întoarce indicatorii agregați (medie pe 1000 iterații).
+# ==========================================================
+studiu_procente_verificare <- function(
+    procente = c(0.01, 0.05, 0.10, 0.20, 0.30),
+    n_iteratii = 1000, n_zile = 365,
+    lambda = 1000, p_sus = 0.005,
+    c1 = 1, c2 = 100) {
+
+  rezultate <- lapply(procente, function(p) {
+    sim <- simuleaza_aleatoare_full(n_iteratii = n_iteratii, n_zile = n_zile,
+                                    lambda = lambda, p_sus = p_sus,
+                                    p_verif = p)
+
+    ind <- sim |>
+      dplyr::group_by(iteratie) |>
+      dplyr::summarise(
+        rata_detectie = sum(detectate) / pmax(sum(n_sus), 1),
+        prob_detectie_zi = mean(detectate >= 1),
+        verificari_zilnice_medii = mean(n_verificate),
+        cost_total = c1 * sum(n_verificate) + c2 * sum(nedetectate),
+        .groups = "drop"
+      )
+
+    data.frame(
+      p_verif = p,
+      rata_detectie_medie = mean(ind$rata_detectie),
+      rata_detectie_sd = sd(ind$rata_detectie),
+      prob_detectie_zi_medie = mean(ind$prob_detectie_zi),
+      prob_detectie_zi_sd = sd(ind$prob_detectie_zi),
+      verificari_zilnice_medii = mean(ind$verificari_zilnice_medii),
+      cost_mediu = mean(ind$cost_total),
+      cost_sd = sd(ind$cost_total)
+    )
+  })
+
+  dplyr::bind_rows(rezultate)
+}
+
+
 simuleaza_geografica_chunks <- function(n_iteratii = 1000, chunk = 50, ...) {
   chunks <- split(1:n_iteratii, ceiling(seq_along(1:n_iteratii) / chunk))
   

@@ -1,8 +1,4 @@
-# ==========================================================
-# ETAPA 3 — Strategia ALEATOARE de verificare (cerința 4a)
-# ----------------------------------------------------------
-# Aplicăm prima strategie: verificăm aleator un procent FIX
-# din cererile zilnice. Calculăm indicatorii ceruți (cerința 5).
+# Etapa 3: Strategia aleatoare (10% verificare)
 # ==========================================================
 
 if (!requireNamespace("patchwork", quietly = TRUE)) {
@@ -19,7 +15,7 @@ set.seed(42)
 
 # Un singur an cu strategia aleatoare 10%
 an_aleator <- simuleaza_aleatoare_full(
-  n_iteratii = 1, n_zile = 365,
+  n_iteratii = 1, n_zile = 365, # functia permite mai multe iteratii, dar noi vrem doar o iteratie de un an pentru inceput
   lambda = 1000, p_sus = 0.005,
   p_verif = 0.10
 )

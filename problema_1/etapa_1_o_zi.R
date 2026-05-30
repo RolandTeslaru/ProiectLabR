@@ -1,38 +1,28 @@
-# ==========================================================
-# ETAPA 1 — Simulăm O SINGURĂ ZI
-# ----------------------------------------------------------
-# Pornim de la cea mai simplă întrebare:
-# "Cum arată activitatea sistemului într-o zi?"
-#
-# Avem nevoie de:
-#   - numărul total de cereri  -> Poisson(lambda)
-#   - cereri suspecte           -> Binomial(n_req, p_sus)
-#   - cereri verificate (10% din total)
-#   - detectate                 -> Hipergeometric(suspecte, normale, verificate)
-# ==========================================================
+# Etapa 1: Simularea unei zile de cereri
+
 
 set.seed(42)
 
 lambda  <- 1000     # rata medie de cereri pe zi
 p_sus   <- 0.005    # 0.5% dintre cereri sunt suspecte
-p_verif <- 0.10     # verificăm 10% dintre cereri
+p_verif <- 0.10     # verificam 10% dintre cereri
 
-# 1. Numărul total de cereri într-o zi
+# folsoim distributia Poisson pentru a genera numarl de cereri intro-o zi.
+# poission e cel mai realistic, pentru ca numarul de cereri poate varia de la o zi la alta, dar are o rata medie stabila (lambda).
 n_req <- rpois(1, lambda)
 
-# 2. Câte dintre ele sunt suspecte
+# generam cate din nreq sunt suspected (doar pt 1 zile)
 n_sus <- rbinom(1, size = n_req, prob = p_sus)
 
-# 3. Câte verificăm (10% din total)
+# cate verifcam din cele n_req cereri 
 n_verificate <- round(n_req * p_verif)
 
-# 4. Câte din cele suspecte cad sub verificare
-#    (selectăm n_verificate cereri din n_req, dintre care n_sus sunt suspecte)
+# extragem cate dintre cele n_sus suspecte sunt detectate, folosind distributia hipergeometrica
 detectate <- rhyper(nn = 1, m = n_sus, n = n_req - n_sus, k = n_verificate)
 nedetectate <- n_sus - detectate
 
-# Afișăm rezultatul
-cat("=== ZIUA SIMULATĂ ===\n")
+# afisam
+cat("=== ZIUA SIMULATA ===\n")
 cat(sprintf("Cereri totale:       %d\n", n_req))
 cat(sprintf("Cereri suspecte:     %d  (din care detectate: %d, nedetectate: %d)\n",
             n_sus, detectate, nedetectate))

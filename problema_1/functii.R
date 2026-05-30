@@ -2,19 +2,13 @@ simuleaza_aleatoare_full <- function(n_iteratii = 1000, n_zile = 365,
                                       lambda = 1000, p_sus = 0.001,
                                       p_verif = 0.10) {
   
-  total <- n_iteratii * n_zile   # 365.000 zile în total
-  
-  # TOATE numerele de cereri, dintr-un singur apel
+  total <- n_iteratii * n_zile   # 365k zile in total
+
+  # La fel ca in etapa 2, dar pentru toate cele 365.000 de zile dintr-un singur apel.
   n_req <- rpois(total, lambda)
-  
-  # TOATE numerele de suspecte, dintr-un singur apel
   n_sus <- rbinom(total, size = n_req, prob = p_sus)
-  
-  # TOATE numerele de verificate
   n_verificate <- round(n_req * p_verif)
-  
-  # TOATE detectatele (hipergeometrică vectorizată)
- detectate <- rhyper(nn = total, m = n_sus, n = n_req - n_sus, k = n_verificate)
+  detectate <- rhyper(nn = total, m = n_sus, n = n_req - n_sus, k = n_verificate)
   
   data.frame(
     iteratie = rep(1:n_iteratii, each = n_zile),

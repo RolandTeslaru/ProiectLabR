@@ -37,6 +37,6 @@ g <- ggplot(an, aes(x = n_sus)) +
   labs(title = "Distributia numarului zilnic de cereri suspecte",
        subtitle = sprintf("p_sus = %.3f, lambda = %d", p_sus, lambda),
     x = "Cereri suspecte intr-o zi", y = "Numar de zile") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 24)
 
 print(g)

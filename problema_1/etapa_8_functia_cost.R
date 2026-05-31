@@ -20,9 +20,9 @@ source("/Users/rolandteslaru/Desktop/ProiectLabR/problema_1/functii.R")
 
 set.seed(42)
 
-# Costuri (raportul 1:300 justificat în comentariul de mai sus)
-c1 <- 1
-c2 <- 300
+# Costuri, valori alese arbitrar
+c1 <- 1 # nu costa mult sa verific o cerere 
+c2 <- 300 # costa mult ratearea unei cerereri suspecte (duce la frauda, damage etc)
 
 # Un singur an pentru fiecare strategie
 sim_aleator <- simuleaza_aleatoare_full(
@@ -59,7 +59,6 @@ print(costuri)
 cat(sprintf("\nStrategia cu cost minim: %s (cost total = %.0f)\n",
             costuri$strategie[1], costuri$cost_total[1]))
 
-# Grafic: decompoziția costului pe componente
 componente <- costuri |>
   select(strategie, cost_verif, cost_nedetectare) |>
   pivot_longer(c(cost_verif, cost_nedetectare),
@@ -88,7 +87,7 @@ g <- ggplot(componente, aes(x = reorder(strategie, cost),
        subtitle = sprintf("c1 = %d (verificare), c2 = %d (nedetectare)",
                           c1, c2),
        x = "Strategie", y = "Cost anual", fill = NULL) +
-  theme_minimal(base_size = 18) +
+  theme_minimal(base_size = 22) +
   theme(legend.position = "bottom",
         plot.title = element_text(face = "bold", size = 22),
         plot.subtitle = element_text(size = 16),

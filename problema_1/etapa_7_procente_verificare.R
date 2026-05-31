@@ -1,16 +1,11 @@
-# ==========================================================
-# ETAPA 7 — Efectul procentului de verificare (cerința 7)
-# ----------------------------------------------------------
-# Variem procentul de verificare în c(1%, 5%, 10%, 20%, 30%)
-# și măsurăm:
+# Etapa 7
+# variaza procentul de verificare c(1%, 5%, 10%, 20%, 30%)
 #   - rata medie de detecție
 #   - probabilitatea zilnică de detecție
-#
 # VALIDARE TEORETICĂ: pentru strategia aleatoare,
 # distribuția hipergeometrică prezice
 #   E[rata_detectie] = k/N = p_verif
-# Linia teoretică y = x ar trebui să se suprapună perfect.
-# ==========================================================
+# Linia teoretică y = x ar trebui să se suprapuna perfect.
 
 library(dplyr)
 library(ggplot2)
@@ -39,7 +34,7 @@ g1 <- ggplot(studiu, aes(x = p_verif, y = rata_detectie_medie)) +
   labs(title = "Rata empirică de detecție vs predicția teoretică",
        subtitle = "Linia punctată: y = x (predicție hipergeometrică)",
        x = "Procent verificat", y = "Rata medie de detecție") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 24)
 
 # Grafic 2: P(detecție ≥ 1 / zi) — curba de saturație
 g2 <- ggplot(studiu, aes(x = p_verif, y = prob_detectie_zi_medie)) +
@@ -51,7 +46,7 @@ g2 <- ggplot(studiu, aes(x = p_verif, y = prob_detectie_zi_medie)) +
        subtitle = "Curbă de saturație — randamente descrescătoare",
        x = "Procent verificat",
        y = "P(detecție ≥ 1 într-o zi)") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 24)
 
 print(g1)
 print(g2)

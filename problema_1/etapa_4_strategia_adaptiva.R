@@ -1,9 +1,4 @@
-# ==========================================================
-# ETAPA 4 — Strategia ADAPTIVĂ (cerința 4b)
-# ----------------------------------------------------------
-# În zilele cu trafic mare verificăm un procent MAI MARE.
-# Comparăm direct cu strategia aleatoare din etapa 3.
-# ==========================================================
+# Etapa 4: Strategie adaptivă (5% sub prag, 20% peste prag)
 
 if (!requireNamespace("patchwork", quietly = TRUE)) {
   install.packages("patchwork")
@@ -17,9 +12,7 @@ source("/Users/rolandteslaru/Desktop/ProiectLabR/problema_1/functii.R")
 
 set.seed(42)
 
-# Pentru o comparație CORECTĂ, aplicăm ambele strategii pe ACELEAȘI date:
-# același n_req și aceleași suspecte zilnice. Astfel diferența dintre
-# curbele de detecție vine DOAR din strategie, nu din șansa simulării.
+# La fel
 n_zile  <- 365
 lambda  <- 1000
 p_sus   <- 0.005
@@ -27,13 +20,14 @@ p_sus   <- 0.005
 n_req <- rpois(n_zile, lambda)
 n_sus <- rbinom(n_zile, size = n_req, prob = p_sus)
 
-# Strategia aleatoare 10%
+# nr de verificaro pentru strategia aleatoare (10% din cereri) (la fel ca in e3)
 n_ver_aleator   <- round(n_req * 0.10)
-det_aleator     <- rhyper(n_zile, m = n_sus, n = n_req - n_sus,
+det_aleator     <- rhyper(n_zile, m = n_sus, n = n_req - n_sus, # detectate aleator
                           k = n_ver_aleator)
 
-# Strategia adaptivă: 5% sub prag, 20% peste prag
-prag <- 1000
+# Strategia adaptiva: 5% sub prag, 20% peste prag
+prag <- 1000 # pragul este lambda poisson
+# tot ce trece peste meidia lambda = 1000, e considerat o zi aglomerata, deci verificam mai mult (20%)
 p_ver_adaptiv   <- ifelse(n_req > prag, 0.20, 0.05)
 n_ver_adaptiv   <- round(n_req * p_ver_adaptiv)
 det_adaptiv     <- rhyper(n_zile, m = n_sus, n = n_req - n_sus,
@@ -51,8 +45,9 @@ an_adaptiv <- data.frame(zi = 1:n_zile, n_req, n_sus,
                          nedetectate = n_sus - det_adaptiv,
                          strategie = "adaptiva")
 
-# Tabel comparativ — TOȚI indicatorii cerinței 5
+# O simpla functie, folosita pt dataframeurile an_aleator si an_adaptiv, care calculeaza indicatorii de performanta (cerinta 5)
 sumar <- function(df, eticheta) {
+  # Indicatori de performanata, la fel ca in e3
   data.frame(
     Strategie              = eticheta,
     P_detectie_zi          = round(mean(df$detectate >= 1), 3),
@@ -112,7 +107,7 @@ g <- ggplot(cumulativ, aes(x = zi)) +
                           sum(det_adaptiv), sum(n_sus)),
        x = "Ziua din an", y = "Număr cumulativ",
        color = NULL) +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 20) +
   theme(legend.position = "bottom")
 
 # Histogramele specifice strategiei ADAPTIVE (cerința 6)
@@ -124,7 +119,7 @@ g_hist_sus <- ggplot(an_adaptiv_df, aes(x = n_sus)) +
   labs(title = "Distribuția zilnică a cererilor suspecte",
        subtitle = "Strategia adaptivă 5/20%",
        x = "Suspecte într-o zi", y = "Număr de zile") +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 12) +
   theme(plot.title = element_text(face = "bold"))
 
 g_hist_det <- ggplot(an_adaptiv_df, aes(x = detectate)) +
@@ -134,7 +129,7 @@ g_hist_det <- ggplot(an_adaptiv_df, aes(x = detectate)) +
        subtitle = sprintf("Strategia adaptivă — %d zile fără detecție",
                           sum(det_adaptiv == 0)),
        x = "Detectate într-o zi", y = "Număr de zile") +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 12) +
   theme(plot.title = element_text(face = "bold"))
 
 # Combinăm toate graficele într-o singură figură

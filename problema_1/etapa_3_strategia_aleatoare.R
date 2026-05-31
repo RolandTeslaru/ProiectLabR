@@ -20,32 +20,42 @@ an_aleator <- simuleaza_aleatoare_full(
   p_verif = 0.10
 )
 
-# Indicatorii ceruți la cerința 5
-# Indicator de eficiență = rata_detectie / efort_relativ
-# (> 1 înseamnă că strategia bate verificarea aleatoare echivalentă)
 indicatori <- data.frame(
-  P_detectie_zi          = mean(an_aleator$detectate >= 1),
-  Proportie_detectate    = sum(an_aleator$detectate) / sum(an_aleator$n_sus),
-  Proportie_nedetectate  = sum(an_aleator$nedetectate) / sum(an_aleator$n_sus),
-  Verificari_zilnice_med = mean(an_aleator$n_verificate),
+  # Prob empirica de a detecta cel putin o cerere suspecta intr-o zi
+  P_detectie_zi          = mean(an_aleator$detectate >= 1),                     # vector true/false, media e proportia de zile cu cel putin o detectie
+  Proportie_detectate    = sum(an_aleator$detectate) / sum(an_aleator$n_sus),   # nr sus detectate / nr sus totale
+  Proportie_nedetectate  = sum(an_aleator$nedetectate) / sum(an_aleator$n_sus), # invers
+  Verificari_zilnice_med = mean(an_aleator$n_verificate),                       # media de verificari pe zi
+
+  # eficienta: proportia de sus detectate / proportia de cereri verificate
+
   Eficienta              = (sum(an_aleator$detectate) /
                             sum(an_aleator$n_sus)) /
                            (sum(an_aleator$n_verificate) /
                             sum(an_aleator$n_req))
+
+  # Daca avem 290 detctate / 365 suspecte = 0.79% (proportia de sus detectate)
+  # Daca verificam 36500 cereri / 365000 cereri totale = 0.10% (proportia de cereri verificate)
+  # Eficienta = 0.79% / 0.10% = 7.9 
+
+  # eficienta === 1 => detectam exact cat verificam (fiecare verificare aduce o detectie)
+  # eficienta > 1 => detectam mai mult decat verificam
+  # eficienta < 1 => detectam mai putin decat verificam (verificarile aduc mai multe false positive decat detectii reale)
 )
 
 cat("=== INDICATORI (Strategia ALEATOARE, p_verif = 10%) ===\n")
 print(indicatori)
 
-# Grafic: evoluția CUMULATIVĂ a cererilor suspecte vs detectate
-# Distanța verticală dintre cele două curbe = câte am ratat până în ziua X.
+# pipe, echivalent cu method chaining (dot chanining: ex [4,3,2,1].sort().max() ) in alte limbaje.
 an_cumulativ <- an_aleator |>
-  arrange(zi) |>
-  mutate(
-    Suspecte_total      = cumsum(n_sus),
-    Detectate_cumulativ = cumsum(detectate),
+  arrange(zi) |> # sortam df ul, dupa zi
+  mutate(        # adaugam coloane noi
+    Suspecte_total      = cumsum(n_sus), 
+    Detectate_cumulativ = cumsum(detectate), 
     Nedetectate_cumulativ = cumsum(nedetectate)
   )
+
+# Grafic cumulativ: cereri suspecte vs detectate (cerința 6)
 
 g <- an_cumulativ |>
   pivot_longer(cols = c(Suspecte_total, Detectate_cumulativ),
@@ -70,7 +80,7 @@ g <- an_cumulativ |>
                           sum(an_aleator$detectate), sum(an_aleator$n_sus)),
        x = "Ziua din an", y = "Număr cumulativ",
        color = NULL) +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 24) +
   theme(legend.position = "bottom")
 
 # Histogramă: numărul de cereri suspecte pe zi (cerința 6)

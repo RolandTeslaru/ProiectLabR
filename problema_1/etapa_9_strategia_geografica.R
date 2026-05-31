@@ -1,15 +1,7 @@
-# ==========================================================
-# ETAPA 9 — Strategia GEOGRAFICĂ (cerința 4c — opțional)
-# ----------------------------------------------------------
-# Generăm O SINGURĂ DATĂ toate cererile (cu regiune și
-# statut de suspect). Apoi aplicăm 3 strategii de verificare
-# pe ACEEAȘI dată. Toate strategiile văd exact aceleași
-# cereri, exact aceiași suspecți. Doar verificarea diferă.
-#
-# Suspectele au structură regională: regiunile cu risc mare
-# (Rusia, Pakistan) au p_sus mai mare → exact pe asta se
-# bazează avantajul geograficei.
-# ==========================================================
+# E9: Strategia geografică (cerința 4c — opțional)
+# Generam o singura adata toate cererile (cu regiune si statut de suspect)
+# Apoi aplicam cele 3 strategii de verificare pe aceleasi date
+# Toate strategiile vad aceleasi creri, aceeasi suspeti etc. Doar verificarea difera.
 
 if (!requireNamespace("patchwork", quietly = TRUE)) {
   install.packages("patchwork")
@@ -26,65 +18,64 @@ set.seed(42)
 n_zile <- 365
 lambda <- 1000
 
-# --- Generare date partajate ---
 n_req_zi   <- rpois(n_zile, lambda)
 total      <- sum(n_req_zi)
 zi_cerere  <- rep(1:n_zile, times = n_req_zi)
 
-# Fiecare cerere primește o regiune (după pondere_trafic)
+# fiecare cerere primeste o regiune (după pondere_trafic)
 regiune <- sample.int(nrow(config_regiuni), total, replace = TRUE,
                       prob = config_regiuni$pondere_trafic)
 
 # Fiecare cerere e suspect cu probabilitatea regiunii ei
-este_suspect <- runif(total) < config_regiuni$p_sus[regiune]
+is_sus <- runif(total) < config_regiuni$p_sus[regiune]
 
 # --- Strategie 1: aleatoare (verifică 10% din TOATE cererile) ---
-este_ver_al <- runif(total) < 0.10
+is_ver_al <- runif(total) < 0.10
 
 # --- Strategie 2: adaptivă (5% în zile liniștite, 20% în aglomerate) ---
 prag        <- 1000
 p_ver_zi    <- ifelse(n_req_zi > prag, 0.20, 0.05)
 p_ver_per_cerere <- p_ver_zi[zi_cerere]
-este_ver_ad <- runif(total) < p_ver_per_cerere
+is_ver_ad <- runif(total) < p_ver_per_cerere
 
 # --- Strategie 3: geografică (p_verif al regiunii cererii) ---
-este_ver_geo <- runif(total) < config_regiuni$p_verif[regiune]
+is_ver_geo <- runif(total) < config_regiuni$p_verif[regiune]
 
 # Detecții pentru fiecare strategie = suspect ŞI verificat
-det_al  <- este_suspect & este_ver_al
-det_ad  <- este_suspect & este_ver_ad
-det_geo <- este_suspect & este_ver_geo
+det_al  <- is_sus & is_ver_al
+det_ad  <- is_sus & is_ver_ad
+det_geo <- is_sus & is_ver_geo
 
 # Agregare pe zi pentru fiecare strategie
 agreg_pe_zi <- function(vec_logic) {
   as.integer(tapply(vec_logic, zi_cerere, sum))
 }
 
-n_sus_zi   <- agreg_pe_zi(este_suspect)
-n_ver_al_z  <- agreg_pe_zi(este_ver_al)
-n_ver_ad_z  <- agreg_pe_zi(este_ver_ad)
-n_ver_geo_z <- agreg_pe_zi(este_ver_geo)
+n_sus_zi   <- agreg_pe_zi(is_sus)
+n_ver_al_z  <- agreg_pe_zi(is_ver_al)
+n_ver_ad_z  <- agreg_pe_zi(is_ver_ad)
+n_ver_geo_z <- agreg_pe_zi(is_ver_geo)
 det_al_z   <- agreg_pe_zi(det_al)
 det_ad_z   <- agreg_pe_zi(det_ad)
 det_geo_z  <- agreg_pe_zi(det_geo)
 
 # Indicator de eficiență (cerința 5)
 eficienta <- function(detect, verif) {
-  (sum(detect) / sum(este_suspect)) / (sum(verif) / total)
+  (sum(detect) / sum(is_sus)) / (sum(verif) / total)
 }
 
 rezumat <- data.frame(
   Strategie     = c("aleatoare", "adaptiva", "geografica"),
   Cereri        = total,
-  Suspecti      = sum(este_suspect),
+  Suspecti      = sum(is_sus),
   Detectate     = c(sum(det_al), sum(det_ad), sum(det_geo)),
-  Verificari    = c(sum(este_ver_al), sum(este_ver_ad),
-                    sum(este_ver_geo)),
+  Verificari    = c(sum(is_ver_al), sum(is_ver_ad),
+                    sum(is_ver_geo)),
   Rata_detectie = c(sum(det_al), sum(det_ad), sum(det_geo)) /
-                  sum(este_suspect),
-  Eficienta     = c(eficienta(det_al,  este_ver_al),
-                    eficienta(det_ad,  este_ver_ad),
-                    eficienta(det_geo, este_ver_geo))
+                  sum(is_sus),
+  Eficienta     = c(eficienta(det_al,  is_ver_al),
+                    eficienta(det_ad,  is_ver_ad),
+                    eficienta(det_geo, is_ver_geo))
 )
 
 cat("=== Comparație finală — același set de date, 3 strategii ===\n")
@@ -122,7 +113,7 @@ g <- ggplot(cumul, aes(x = zi)) +
             hjust = 0, fontface = "bold", size = 5,
             show.legend = FALSE) +
   annotate("text", x = 300, y = max(cumul$Suspecte) * 1.03,
-           label = sprintf("Total suspecte: %d", sum(este_suspect)),
+           label = sprintf("Total suspecte: %d", sum(is_sus)),
            color = "steelblue", fontface = "bold", size = 4.5) +
   scale_color_manual(values = culori) +
   expand_limits(x = max(cumul$zi) + 80) +
